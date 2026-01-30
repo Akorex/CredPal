@@ -3,6 +3,8 @@ import { wrapService, wrapController } from "../../utils/wrappers";
 import { ProductController } from "./product.controller";
 import { ProductService } from "./product.service";
 import { verifyToken } from "../../utils/auth";
+import { CreateProductDto } from "./product.dto";
+import validationMiddleware from "../../middlewares/validator";
 
 export class ProductRoute {
   public router = Router();
@@ -21,6 +23,7 @@ export class ProductRoute {
     this.router.post(
       `${this.path}`,
       verifyToken,
+      validationMiddleware(CreateProductDto),
       this.productController.createProduct,
     );
     this.router.get(

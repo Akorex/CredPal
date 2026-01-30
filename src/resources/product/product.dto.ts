@@ -24,7 +24,6 @@ class CreditConfigDto {
   interestRate: number; // e.g. 2.5 for 2.5% per month
 }
 
-// 2. The Main Create DTO
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()

@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import App from ".";
 import http from "http";
 import { routes } from "./routes";

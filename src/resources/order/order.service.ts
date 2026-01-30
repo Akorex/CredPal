@@ -1,62 +1,68 @@
 import { CustomError } from "../../utils/custom-error";
 import Product from "../product/product.model";
+import mongoose from "mongoose";
 import { CreateOrderDto } from "./order.dto";
 import Order from "./order.model";
 
 export class OrderService {
   public async createOrder(merchantId: string, data: CreateOrderDto) {
-    const product = await Product.findOne({
-      _id: data.productId,
-      merchant: merchantId,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // CHECK 1: Existence
-    if (!product) {
-      throw CustomError.NotFound("Product not found in your inventory");
-    }
+    try {
+      const product = await Product.findOne({
+        _id: data.productId,
+        merchant: merchantId,
+      }).session(session);
 
-    // CHECK 2: Stock
-    if (product.stock <= 0) {
-      throw CustomError.BadRequest("Product is out of stock");
-    }
+      if (!product) throw CustomError.NotFound("Product not found");
 
-    const amount = product.price;
+      if (product.stock <= 0) {
+        throw CustomError.BadRequest("Product is out of stock");
+      }
 
-    if (!product.creditConfig.enabled) {
-      throw CustomError.BadRequest("This product is not eligible for credit");
-    }
+      if (!product.creditConfig.enabled) {
+        throw CustomError.BadRequest("This product is not eligible for credit");
+      }
+      const amount = product.price;
+      const minRequired = (amount * product.creditConfig.minDownPayment) / 100;
 
-    const minRequired = (amount * product.creditConfig.minDownPayment) / 100;
+      if (data.downPayment < minRequired) {
+        throw CustomError.BadRequest(
+          `Down payment too low. Min: ${minRequired}`,
+        );
+      }
 
-    if (data.downPayment < minRequired) {
-      throw CustomError.BadRequest(
-        `Down payment too low. Minimum ${product.creditConfig.minDownPayment}% (${minRequired}) required.`,
+      const financedAmount = amount - data.downPayment;
+      const [order] = await Order.create(
+        [
+          {
+            merchant: merchantId,
+            product: data.productId,
+            customerEmail: data.customerEmail,
+            amount,
+            downPayment: data.downPayment,
+            financedAmount,
+            tenureMonths: data.tenureMonths,
+            status: "approved",
+          },
+        ],
+        { session },
       );
+
+      await Product.updateOne(
+        { _id: product._id },
+        { $inc: { stock: -1 } },
+      ).session(session);
+
+      await session.commitTransaction();
+      return order;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    if (data.downPayment > amount) {
-      throw CustomError.BadRequest(
-        "Down payment cannot be greater than the product price",
-      );
-    }
-
-    const financedAmount = amount - data.downPayment;
-
-    const order = await Order.create({
-      merchant: merchantId,
-      product: data.productId,
-      customerEmail: data.customerEmail,
-      amount,
-      downPayment: data.downPayment,
-      financedAmount,
-      tenureMonths: data.tenureMonths,
-      status: "approved", //autoapprove for now
-    });
-
-    product.stock -= 1;
-    await product.save();
-
-    return order;
   }
 
   public async getOrders(merchantId: string) {

@@ -3,6 +3,8 @@ import { OrderController } from "./order.controller";
 import { OrderService } from "./order.service";
 import { verifyToken } from "../../utils/auth";
 import { wrapService, wrapController } from "../../utils/wrappers";
+import validationMiddleware from "../../middlewares/validator";
+import { CreateOrderDto } from "./order.dto";
 
 export class OrderRoute {
   public router = Router();
@@ -16,7 +18,12 @@ export class OrderRoute {
   }
 
   private routes() {
-    this.router.post("/orders", verifyToken, this.orderController.createOrder);
+    this.router.post(
+      "/orders",
+      verifyToken,
+      validationMiddleware(CreateOrderDto),
+      this.orderController.createOrder,
+    );
     this.router.get("/orders", verifyToken, this.orderController.findOrders);
     this.router.get(
       "/orders/:id",
