@@ -4,6 +4,15 @@ import Product from "./product.model";
 
 export class ProductService {
   async createProduct(merchantId: string, product: CreateProductDto) {
+    const existing = await Product.findOne({
+      sku: product.sku,
+      merchant: merchantId,
+    });
+
+    if (existing) {
+      throw CustomError.BadRequest("Product already exists");
+    }
+
     return await Product.create({ ...product, merchant: merchantId });
   }
 
