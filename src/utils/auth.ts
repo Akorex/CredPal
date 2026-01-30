@@ -28,7 +28,7 @@ export const verifyToken = async (
 
       const { id } = token as JwtPayload;
 
-      // req.user = { id };
+      req.user = { id };
       next();
     });
   } catch (error) {

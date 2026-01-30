@@ -2,37 +2,57 @@ import { IRequest } from "../../utils/request";
 import { Response } from "express";
 import { ProductService } from "./product.service";
 import { CreateProductDto } from "./product.dto";
+import { ResponseHandler } from "../../utils/responses";
 
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  //   async createProduct(req: IRequest<CreateProductDto>, res: Response) {
-  //     const { name, description, price, stock, creditConfig, sku } = req.body;
-  //     const merchant = req.user?.id;
+  createProduct = async (req: IRequest<CreateProductDto>, res: Response) => {
+    const { name, description, price, stock, creditConfig, sku } = req.body;
+    const merchantId = req.user?.id as string;
 
-  //     const product = await this.productService.createProduct({
-  //       name,
-  //       description,
-  //       price,
-  //       stock,
-  //       creditConfig,
-  //       sku,
-  //       merchant,
-  //     });
-  //     return res.status(201).json({ success: true, data: product });
-  //   }
+    const product = await this.productService.createProduct(merchantId, {
+      name,
+      description,
+      price,
+      stock,
+      creditConfig,
+      sku,
+    });
 
-  async findProducts(req: IRequest, res: Response) {
-    const products = await this.productService.findProducts();
-    return res.status(200).json({ success: true, data: products });
-  }
+    ResponseHandler.successResponse(
+      res,
+      "Product created successfully",
+      product,
+      201,
+    );
+  };
 
-  async findProductById(
+  findProducts = async (req: IRequest, res: Response) => {
+    const merchantId = req.user?.id as string;
+    const products = await this.productService.findProducts(merchantId);
+
+    ResponseHandler.successResponse(
+      res,
+      "Products fetched successfully",
+      products,
+      200,
+    );
+  };
+
+  findProductById = async (
     req: IRequest<unknown, unknown, { id: string }>,
     res: Response,
-  ) {
+  ) => {
     const { id } = req.params;
-    const product = await this.productService.findProductById(id);
-    return res.status(200).json({ success: true, data: product });
-  }
+    const merchantId = req.user?.id as string;
+    const product = await this.productService.findProductById(id, merchantId);
+
+    ResponseHandler.successResponse(
+      res,
+      "Product fetched successfully",
+      product,
+      200,
+    );
+  };
 }

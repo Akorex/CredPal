@@ -47,7 +47,7 @@ export class MerchantService {
       throw CustomError.Unauthorized("Invalid email or password");
     }
 
-    const token = generateAccessToken(merchant._id.toString());
+    const token = await generateAccessToken(merchant._id.toString());
 
     merchant.password = undefined as any;
 
